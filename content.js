@@ -3,13 +3,16 @@
   const HIDDEN_ATTR = "data-paid-promo-hidden";
   const AD_LABELS = new Set(["Ad", "Promoted", "Promoted Tweet"]);
 
+  // Walk up from a matched element to the largest reasonable tweet container.
+  // Prefer placementTracking only if it CONTAINS the article (i.e. it really is the ad wrapper),
+  // otherwise fall back to the tweet article or cell.
   const findTweetRoot = (el) => {
-    return (
-      el.closest('[data-testid="placementTracking"]') ||
-      el.closest('article[data-testid="tweet"]') ||
-      el.closest("article") ||
-      el.closest('[data-testid="cellInnerDiv"]')
-    );
+    const article =
+      el.closest('article[data-testid="tweet"]') || el.closest("article");
+    const cell = el.closest('[data-testid="cellInnerDiv"]');
+    const placement = el.closest('[data-testid="placementTracking"]');
+    if (placement && article && placement.contains(article)) return placement;
+    return article || cell || placement;
   };
 
   const hideTweet = (root) => {
@@ -24,10 +27,14 @@
     return AD_LABELS.has(text);
   };
 
-  const scanArticleForAdLabel = (article) => {
-    const spans = article.querySelectorAll('[data-testid="User-Name"] span, header span, div[dir="ltr"] > span > span');
-    for (const span of spans) {
-      if (isAdLabelSpan(span)) return true;
+  const articleHasAdLabel = (article) => {
+    // Restrict to the tweet header / user-name region so we don't match the body text.
+    const headerScopes = article.querySelectorAll('[data-testid="User-Name"]');
+    const scopes = headerScopes.length ? headerScopes : [article];
+    for (const scope of scopes) {
+      for (const span of scope.querySelectorAll("span")) {
+        if (isAdLabelSpan(span)) return true;
+      }
     }
     return false;
   };
@@ -35,18 +42,15 @@
   const scan = (root) => {
     if (!(root instanceof Element || root instanceof Document)) return;
 
-    for (const node of root.querySelectorAll('[data-testid="placementTracking"]')) {
-      hideTweet(node);
-    }
-
+    // 1. Paid-partnership link → hide containing tweet.
     for (const link of root.querySelectorAll(`a[href*="${PAID_HREF}"]`)) {
       hideTweet(findTweetRoot(link));
     }
 
-    const articles = root.querySelectorAll('article[data-testid="tweet"]');
-    for (const article of articles) {
+    // 2. "Ad" / "Promoted" label in the tweet header → hide containing tweet.
+    for (const article of root.querySelectorAll('article[data-testid="tweet"]')) {
       if (article.hasAttribute(HIDDEN_ATTR)) continue;
-      if (scanArticleForAdLabel(article)) hideTweet(findTweetRoot(article));
+      if (articleHasAdLabel(article)) hideTweet(findTweetRoot(article));
     }
   };
 
