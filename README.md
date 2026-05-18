@@ -4,7 +4,7 @@ A tiny Chrome extension that hides promoted ads and paid-partnership tweets on X
 
 ## What it blocks
 
-1. **Promoted ads** — tweets wrapped in X's `[data-testid="placementTracking"]` ad slot.
+1. **Promoted ads** — tweets wrapped in X's `Promotion` ad slot.
 2. **Paid Partnership tweets** — tweets containing a link to X's paid-partnerships policy page.
 3. **"Ad" / "Promoted" labels** — tweets whose header contains a standalone `Ad`, `Promoted`, or `Promoted Tweet` label, as a fallback when the ad-slot wrapper isn't present.
 
